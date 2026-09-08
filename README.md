@@ -9,7 +9,7 @@ reads two build variables that Qovery has to route differently.
 
 | Variable | How Qovery passes it | Where the value ends up |
 |---|---|---|
-| `BUILD_SECRET_TOKEN` | `--secret id=BUILD_SECRET_TOKEN,src=<file>` | Mounted at `/run/secrets/BUILD_SECRET_TOKEN` for one build step. Not in any layer, not in the image configuration, not in the build cache. |
+| `BUILD_ENV_VAR` | `--secret id=BUILD_ENV_VAR,src=<file>` | Mounted at `/run/secrets/BUILD_ENV_VAR` for one build step. Not in any layer, not in the image configuration, not in the build cache. |
 | `BUILD_GREETING` | `--build-arg BUILD_GREETING=<value>` | Recorded in the image configuration by the `ENV` in the final stage, so `docker history` and `docker inspect` both show it. |
 
 The Dockerfile decides which is which: a name declared as an `ARG` becomes a build arg, a name used
@@ -20,10 +20,15 @@ the deployment logs.
 The secret mount is declared `required=true`, so the build fails when no build variable matches the
 id rather than silently reading an empty file.
 
+`BUILD_ENV_VAR` is named to match an existing Qovery **external secret** — a variable backed by a
+secret manager rather than stored in Qovery. The engine resolves external secrets into the build's
+variables before the build runs, so the same secret manager entry can back either a `--build-arg`
+or a build secret without renaming anything.
+
 ## Checking that the secret stayed out of the image
 
 ```sh
-docker history --no-trunc <image> | grep BUILD_       # BUILD_GREETING yes, BUILD_SECRET_TOKEN no
+docker history --no-trunc <image> | grep BUILD_       # BUILD_GREETING yes, BUILD_ENV_VAR no
 docker inspect <image> --format '{{json .Config.Env}}'
 ```
 
@@ -31,7 +36,7 @@ docker inspect <image> --format '{{json .Config.Env}}'
 
 ```sh
 printf 'a-token-value' > /tmp/build-secret
-docker build --secret id=BUILD_SECRET_TOKEN,src=/tmp/build-secret \
+docker build --secret id=BUILD_ENV_VAR,src=/tmp/build-secret \
              --build-arg BUILD_GREETING=hello -t hello-world .
 docker run --rm -p 8080:8080 hello-world
 curl localhost:8080/hello

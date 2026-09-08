@@ -7,17 +7,17 @@ COPY . .
 
 # Build secret (QOV-2210).
 #
-# Qovery mounts the value of the build variable named BUILD_SECRET_TOKEN into this one step, with
+# Qovery mounts the value of the build variable named BUILD_ENV_VAR into this one step, with
 # BuildKit's `--secret`. The value never lands in a layer, in the image configuration or in the
 # build cache, which is what a plain `ARG` cannot give you. A private registry credential needed
 # only while compiling belongs here.
 #
 # `required=true` fails the build when no build variable matches the id, instead of reading an empty
 # file. Only the length is echoed: the value must stay out of the build logs too.
-RUN --mount=type=secret,id=BUILD_SECRET_TOKEN,required=true \
-    TOKEN="$(cat /run/secrets/BUILD_SECRET_TOKEN)"; \
-    test -n "$TOKEN" || { echo "BUILD_SECRET_TOKEN is mounted but empty"; exit 1; }; \
-    echo "BUILD_SECRET_TOKEN mounted: ${#TOKEN} characters"; \
+RUN --mount=type=secret,id=BUILD_ENV_VAR,required=true \
+    SECRET="$(cat /run/secrets/BUILD_ENV_VAR)"; \
+    test -n "$SECRET" || { echo "BUILD_ENV_VAR is mounted but empty"; exit 1; }; \
+    echo "BUILD_ENV_VAR mounted: ${#SECRET} characters"; \
     ./gradlew clean build -x check
 
 #Stage 2
